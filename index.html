@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phillip Jong 信息库 - 本地播放</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="main-header">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>鐘理恩 (Phillip Jong) 信息库</h1>
+                    <p class="subtitle">让所有信息触手可及 - 本地管理系统</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="top-bar">
+            <div class="search-container">
+                <div class="search-icon">🔍</div>
+                <input type="text" id="searchInput" placeholder="搜索主题、日期或经文...">
+            </div>
+            <div class="controls-group">
+                <select id="yearFilter">
+                    <option value="all">所有年份</option>
+                </select>
+                <button id="addManualBtn" class="btn-primary" title="添加记录">+</button>
+                <button id="syncBtn" class="btn-sync" title="检查并同步最新信息">🔄</button>
+                <button id="bioBtn" class="btn-secondary" title="传道人简介">ℹ️</button>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <aside class="bio-panel collapsed" id="bioPanel">
+                <div class="bio-card">
+                    <h3>关于 鐘理恩 弟兄</h3>
+                    <div class="bio-content">
+                        <p>鐘理恩 (Phillip Jong) 弟兄现任休斯顿基督徒聚会 (HCA) 的长老。自 1991 年起，他便全身心地投入到主的事工中。</p>
+                        <p>他主要在 HCA 西区 (Westoffice) 服事，其讲演极具属灵洞察力，深受弟兄姊妹喜爱。他经常在主日崇拜、冬季退修会以及各类特会（如台湾基督徒聚集 TCC）中分享神的话语。
+                        </p>
+                        <p>鐘弟兄对培育年轻一代信徒有着特别的负担，他致力于通过圣经真理的教导，帮助年轻一辈在主里成长扎根。在超过三十年的服事生涯中，他以稳健的生命和对教会的委身，成为了许多人的榜样与导师。</p>
+                    </div>
+                    <button class="btn-close-bio" id="closeBio">关闭简介</button>
+                </div>
+            </aside>
+
+            <div class="content-area">
+                <div class="gallery" id="gallery">
+                    <!-- Cards injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Player -->
+    <div class="modal" id="playerModal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <div id="modalTopicZH" class="message-topic-zh"></div>
+            <div id="modalTopicEN" class="message-topic-en"></div>
+            <div id="modalDate" class="message-date"></div>
+            <div class="player-container" id="playerContainer">
+                <!-- Audio/Video element will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Entry Modal -->
+    <div class="modal" id="manualModal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeManualModal">&times;</span>
+            <div class="message-topic-zh">手动添加信息</div>
+            <form id="manualForm" class="manual-form">
+                <input type="date" id="mDate" required placeholder="日期">
+                <input type="text" id="mTopicZH" required placeholder="中文标题">
+                <input type="text" id="mTopicEN" placeholder="英文标题">
+                <input type="text" id="mSubfolder" placeholder="子文件夹 (可选, 如: 专题/讲经)">
+                <div class="input-row">
+                    <input type="text" id="mUrl" placeholder="媒体链接 (或下方选择本地文件)">
+                    <input type="file" id="mFile" accept="audio/*,video/*" style="display:none">
+                    <button type="button" class="btn-secondary" id="filePickBtn"
+                        style="font-size:0.8rem">选择本地文件</button>
+                </div>
+                <div id="fileStatus" style="font-size:0.8rem; color:var(--text-muted)">未选择文件</div>
+                <input type="text" id="mScripture" placeholder="经文">
+                <input type="text" id="mType" placeholder="会议类型 ( e.g. Sunday Sharing)">
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">保存记录</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

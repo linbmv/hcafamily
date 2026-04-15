@@ -1,0 +1,9 @@
+services:
+  message-manager:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./media:/app/media
+      - ./metadata.json:/app/metadata.json
+    restart: always

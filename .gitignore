@@ -1,0 +1,12 @@
+# 忽略媒体文件夹（不纳入版本控制）
+media/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 常见系统文件
+.DS_Store
+
+# Claude Code 本地设置（避免误提交本机权限配置）
+.claude/settings.local.json
