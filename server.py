@@ -2,7 +2,8 @@ from flask import Flask, jsonify, request, send_from_directory
 import os
 import json
 import threading
-from sync import run_sync, METADATA_FILE, MEDIA_DIR, load_metadata, save_metadata
+from sync import METADATA_FILE, MEDIA_DIR, load_metadata, save_metadata
+from sync_manager import manager as sync_manager
 
 app = Flask(__name__, static_url_path='', static_folder='.')
 
@@ -18,25 +19,14 @@ def get_metadata():
 
 @app.route('/api/sync', methods=['POST'])
 def trigger_sync():
-    global is_syncing
-    if is_syncing:
+    if sync_manager.run_all():
+        return jsonify({"status": "started", "message": "Master sync started in background"})
+    else:
         return jsonify({"status": "busy", "message": "Sync already in progress"}), 409
-    
-    def sync_task():
-        global is_syncing
-        is_syncing = True
-        try:
-            run_sync()
-        finally:
-            is_syncing = False
-
-    thread = threading.Thread(target=sync_task)
-    thread.start()
-    return jsonify({"status": "started", "message": "Sync started in background"})
 
 @app.route('/api/status')
 def get_status():
-    return jsonify({"is_syncing": is_syncing})
+    return jsonify({"is_syncing": sync_manager.get_status()})
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():

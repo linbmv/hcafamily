@@ -111,11 +111,12 @@ function populateYearFilter() {
 
 function renderGallery(messages) {
     gallery.innerHTML = '';
-    messages.forEach(msg => {
+    messages.forEach((msg, index) => {
         const card = document.createElement('div');
         card.className = 'message-card';
-        const hasAudio = !!(msg.audio_url || msg.local_audio_path || (!msg.audio_url && !msg.video_url && msg.url && !msg.url.endsWith('.mp4')));
-        const hasVideo = !!(msg.video_url || msg.local_video_path || (msg.url && msg.url.endsWith('.mp4')));
+        card.id = `msg-${index}`;
+        const hasAudio = !!(msg.audio_url || msg.local_audio_path || (msg.local_path && !msg.local_path.endsWith('.mp4')));
+        const hasVideo = !!(msg.video_url || msg.local_video_path || (msg.local_path && msg.local_path.endsWith('.mp4')) || (msg.url && msg.url.endsWith('.mp4')));
 
         card.innerHTML = `
             <div class="edit-overlay" title="编辑信息">✏️</div>
@@ -129,13 +130,34 @@ function renderGallery(messages) {
                     ${hasVideo ? '<span class="play-badge video" title="观看视频"><i class="fa-brands fa-youtube"></i></span>' : ''}
                 </div>
             </div>
+            <div class="card-player-container" id="player-container-${index}"></div>
         `;
 
         card.querySelector('.edit-overlay').onclick = (e) => {
             e.stopPropagation();
             editMessage(msg);
         };
-        card.onclick = () => openPlayer(msg);
+
+        // Handle specific badge clicks
+        const audioBadge = card.querySelector('.play-badge:not(.video)');
+        const videoBadge = card.querySelector('.play-badge.video');
+
+        if (audioBadge) {
+            audioBadge.onclick = (e) => {
+                e.stopPropagation();
+                openPlayer(msg, index, 'audio');
+            };
+        }
+
+        if (videoBadge) {
+            videoBadge.onclick = (e) => {
+                e.stopPropagation();
+                openPlayer(msg, index, 'video');
+            };
+        }
+
+        // Card click defaults to audio (if available) or auto
+        card.onclick = () => openPlayer(msg, index, 'card');
         gallery.appendChild(card);
     });
 }
@@ -152,34 +174,79 @@ function convertGDriveLink(url) {
     return url;
 }
 
-function openPlayer(msg) {
-    let isVideo = !!(msg.video_url || msg.local_video_path || (msg.url && msg.url.endsWith('.mp4')));
-    let rawPath = msg.local_video_path || msg.video_url || msg.local_audio_path || msg.audio_url || msg.url;
+function openPlayer(msg, index, mode = 'auto') {
+    let isYouTube = !!(msg.url && (msg.url.includes('youtube.com') || msg.url.includes('youtu.be')));
+    if (!isYouTube && msg.video_url) {
+        isYouTube = msg.video_url.includes('youtube.com') || msg.video_url.includes('youtu.be');
+    }
 
-    let mediaPath = convertGDriveLink(rawPath);
+    let mediaPath = '';
+
+    if (mode === 'audio') {
+        mediaPath = msg.local_audio_path || msg.audio_url || (msg.local_path && !msg.local_path.endsWith('.mp4') ? msg.local_path : null);
+    } else if (mode === 'video') {
+        mediaPath = msg.local_video_path || msg.video_url || (msg.local_path && msg.local_path.endsWith('.mp4') ? msg.local_path : null);
+    } else {
+        // card click or auto mode
+        // If it has audio, use it first (integrated player). Otherwise use video (modal).
+        const hasAudio = !!(msg.audio_url || msg.local_audio_path || (msg.local_path && !msg.local_path.endsWith('.mp4')));
+        if (hasAudio) {
+            mediaPath = msg.local_audio_path || msg.audio_url || (msg.local_path && !msg.local_path.endsWith('.mp4') ? msg.local_path : null);
+            mode = 'audio';
+        } else {
+            mediaPath = msg.local_video_path || msg.video_url || (msg.local_path && msg.local_path.endsWith('.mp4') ? msg.local_path : null) || msg.url;
+            mode = 'video';
+        }
+    }
+
+    if (!mediaPath) return;
+
+    mediaPath = convertGDriveLink(mediaPath);
 
     if (mediaPath && !mediaPath.startsWith('http')) {
-        mediaPath = '/' + mediaPath;
+        mediaPath = '/' + mediaPath.replace(/\\/g, '/');
     }
 
-    document.getElementById('modalTopicZH').innerText = msg.topic_zh;
-    document.getElementById('modalTopicEN').innerText = msg.topic_en;
-    document.getElementById('modalDate').innerText = `${msg.date} | ${msg.type}`;
+    // Stop and hide ALL other in-card players
+    document.querySelectorAll('.card-player-container').forEach(container => {
+        if (container.id !== `player-container-${index}`) {
+            container.innerHTML = '';
+            container.classList.remove('active');
+        }
+    });
 
-    if (mediaPath && (mediaPath.includes('youtube.com') || mediaPath.includes('youtu.be'))) {
-        let videoId = '';
-        if (mediaPath.includes('v=')) videoId = mediaPath.split('v=')[1].split('&')[0];
-        else if (mediaPath.includes('live/')) videoId = mediaPath.split('live/')[1].split('?')[0];
-        else if (mediaPath.includes('be/')) videoId = mediaPath.split('be/')[1];
+    const currentIsYouTube = !!(mediaPath && (mediaPath.includes('youtube.com') || mediaPath.includes('youtu.be')));
 
-        playerContainer.innerHTML = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    if (mode === 'video' || currentIsYouTube) {
+        // Use Modal for Video or YouTube
+        document.getElementById('modalTopicZH').innerText = msg.topic_zh;
+        document.getElementById('modalTopicEN').innerText = msg.topic_en;
+        document.getElementById('modalDate').innerText = `${msg.date} | ${msg.type}`;
+
+        if (currentIsYouTube) {
+            let videoId = '';
+            const url = mediaPath;
+            if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+            else if (url.includes('live/')) videoId = url.split('live/')[1].split('?')[0];
+            else if (url.includes('be/')) videoId = url.split('be/')[1];
+
+            playerContainer.innerHTML = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        } else {
+            playerContainer.innerHTML = `<video controls src="${mediaPath}" autoplay></video>`;
+        }
+        playerModal.style.display = 'flex';
     } else {
-        playerContainer.innerHTML = isVideo
-            ? `<video controls src="${mediaPath}" autoplay></video>`
-            : `<audio controls src="${mediaPath}" autoplay></audio>`;
+        // Toggle/Use Integrated In-Card Player for Audio
+        const targetContainer = document.getElementById(`player-container-${index}`);
+        if (targetContainer.classList.contains('active')) {
+            // Already active, just close it
+            targetContainer.innerHTML = '';
+            targetContainer.classList.remove('active');
+        } else {
+            targetContainer.innerHTML = `<audio controls src="${mediaPath}" autoplay style="width: 100%;"></audio>`;
+            targetContainer.classList.add('active');
+        }
     }
-
-    playerModal.style.display = 'flex';
 }
 
 function editMessage(msg) {
