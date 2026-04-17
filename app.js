@@ -1,4 +1,5 @@
 let allMessages = [];
+let allFolders = [];
 
 const gallery = document.getElementById('gallery');
 const searchInput = document.getElementById('searchInput');
@@ -10,13 +11,17 @@ const statusText = document.getElementById('statusText');
 
 async function loadMessages() {
     try {
-        const response = await fetch('/api/metadata');
-        allMessages = await response.json();
+        const [metaRes, folderRes] = await Promise.all([
+            fetch('/api/metadata'),
+            fetch('/api/folders')
+        ]);
+        allMessages = await metaRes.json();
+        allFolders = await folderRes.json();
 
         // Sort by date descending
         allMessages.sort((a, b) => b.date.localeCompare(a.date));
 
-        populateYearFilter();
+        populateFolderFilter();
         renderGallery(allMessages);
 
         checkSyncStatus();
@@ -98,13 +103,12 @@ manualForm.onsubmit = async (e) => {
     }
 };
 
-function populateYearFilter() {
-    const years = [...new Set(allMessages.map(m => m.date.split('-')[0]))].sort().reverse();
-    yearFilter.innerHTML = '<option value="all">所有年份</option>';
-    years.forEach(year => {
+function populateFolderFilter() {
+    yearFilter.innerHTML = '<option value="all">所有分类</option>';
+    allFolders.forEach(folder => {
         const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
+        option.value = folder;
+        option.textContent = folder;
         yearFilter.appendChild(option);
     });
 }
@@ -128,6 +132,25 @@ function renderGallery(messages) {
                 <div class="media-badges">
                     ${hasAudio ? '<span class="play-badge" title="收听音频"><i class="fa-solid fa-microphone"></i></span>' : ''}
                     ${hasVideo ? '<span class="play-badge video" title="观看视频"><i class="fa-brands fa-youtube"></i></span>' : ''}
+                </div>
+            </div>
+            ${msg.tags ? `
+            <div class="message-tags">
+                ${msg.tags.split(',').map(tag => `<span class="tag-badge">${tag.trim()}</span>`).join('')}
+            </div>` : ''}
+            ${msg.remarks ? `<div class="message-remarks"><i class="fa-solid fa-note-sticky"></i> ${msg.remarks}</div>` : ''}
+            
+            <div class="impressions-section">
+                <div class="impressions-title">
+                    <span>听众感想 (${(msg.impressions || []).length})</span>
+                </div>
+                <ul class="impressions-list">
+                    ${(msg.impressions || []).map(imp => `<li class="impression-item">${imp}</li>`).join('')}
+                    ${(msg.impressions || []).length === 0 ? '<li class="impression-item" style="border:none; color:var(--text-muted); opacity:0.6;">暂无感想</li>' : ''}
+                </ul>
+                <div class="impression-input-group">
+                    <input type="text" class="impression-input" placeholder="输入你的感想..." id="imp-input-${index}">
+                    <button class="btn-impression" onclick="event.stopPropagation(); submitImpression(${index})">提交</button>
                 </div>
             </div>
             <div class="card-player-container" id="player-container-${index}"></div>
@@ -256,7 +279,36 @@ function editMessage(msg) {
     document.getElementById('mUrl').value = msg.video_url || msg.audio_url || msg.url;
     document.getElementById('mScripture').value = msg.scripture;
     document.getElementById('mType').value = msg.type;
+    document.getElementById('mTags').value = msg.tags || '';
+    document.getElementById('mRemarks').value = msg.remarks || '';
     manualModal.style.display = 'flex';
+}
+
+async function submitImpression(index) {
+    const msg = allMessages[index];
+    const input = document.getElementById(`imp-input-${index}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    try {
+        const response = await fetch('/api/add_impression', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                date: msg.date,
+                topic_zh: msg.topic_zh,
+                text: text
+            })
+        });
+        if (response.ok) {
+            input.value = '';
+            loadMessages(); // Reload to show new impression
+        } else {
+            alert('提交失败');
+        }
+    } catch (error) {
+        alert('提交出错');
+    }
 }
 
 // Add File Upload Logic to app.js
@@ -305,7 +357,9 @@ manualForm.onsubmit = async (e) => {
         local_audio_path: localPath && !localPath.endsWith('.mp4') ? localPath : null,
         local_video_path: localPath && localPath.endsWith('.mp4') ? localPath : null,
         scripture: document.getElementById('mScripture').value,
-        type: document.getElementById('mType').value
+        type: document.getElementById('mType').value,
+        tags: document.getElementById('mTags').value,
+        remarks: document.getElementById('mRemarks').value
     };
 
     try {
@@ -336,15 +390,29 @@ function closePlayer() {
 
 function filterMessages() {
     const query = searchInput.value.toLowerCase();
-    const year = yearFilter.value;
+    const folder = yearFilter.value; // Reuse existing dropdown element for folders
 
     const filtered = allMessages.filter(m => {
         const matchesQuery = (m.topic_zh && m.topic_zh.toLowerCase().includes(query)) ||
             (m.topic_en && m.topic_en.toLowerCase().includes(query)) ||
             (m.scripture && m.scripture.toLowerCase().includes(query)) ||
+            (m.tags && m.tags.toLowerCase().includes(query)) ||
+            (m.remarks && m.remarks.toLowerCase().includes(query)) ||
+            (m.impressions && m.impressions.some(imp => imp.toLowerCase().includes(query))) ||
             (m.date && m.date.includes(query));
-        const matchesYear = year === 'all' || m.date.startsWith(year);
-        return matchesQuery && matchesYear;
+
+        let matchesFolder = folder === 'all';
+        if (!matchesFolder) {
+            const paths = [m.local_path, m.local_audio_path, m.local_video_path];
+            matchesFolder = paths.some(p => p && p.includes(`media/${folder}/`));
+
+            // Fallback: If folder looks like a 4-digit year, match by date as well
+            if (!matchesFolder && /^\d{4}$/.test(folder)) {
+                matchesFolder = m.date && m.date.startsWith(folder);
+            }
+        }
+
+        return matchesQuery && matchesFolder;
     });
 
     renderGallery(filtered);

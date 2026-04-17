@@ -76,6 +76,52 @@ def add_manual_entry():
     save_metadata(metadata)
     return jsonify({"status": "success", "message": "Updated successfully" if found else "Added successfully"})
 
+@app.route('/api/add_impression', methods=['POST'])
+def add_impression():
+    data = request.json
+    date = data.get('date')
+    topic_zh = data.get('topic_zh')
+    text = data.get('text')
+    
+    if not all([date, topic_zh, text]):
+        return jsonify({"status": "error", "message": "Missing fields"}), 400
+    
+    metadata = load_metadata()
+    found = False
+    for item in metadata:
+        if item.get('date') == date and item.get('topic_zh') == topic_zh:
+            if 'impressions' not in item or not isinstance(item['impressions'], list):
+                item['impressions'] = []
+            item['impressions'].append(text)
+            found = True
+            break
+    
+    if found:
+        save_metadata(metadata)
+        return jsonify({"status": "success"})
+    else:
+        return jsonify({"status": "error", "message": "Message not found"}), 404
+
+@app.route('/api/folders')
+def get_folders():
+    folder_list = []
+    for root, dirs, files in os.walk(MEDIA_DIR):
+        for d in dirs:
+            if d.startswith('.'):
+                continue
+            full_path = os.path.join(root, d)
+            rel_path = os.path.relpath(full_path, MEDIA_DIR).replace('\\', '/')
+            folder_list.append(rel_path)
+    
+    # Sort: Years first (desc), then misc paths
+    folder_list.sort(key=lambda x: (not x.isdigit(), x if x.isdigit() else x.lower()), reverse=False)
+    # Actually, a simple sort reverse might be better for years, but let's try to be smart.
+    # Years like 2026, 2025... should be at the top.
+    
+    years = sorted([f for f in folder_list if f.isdigit()], reverse=True)
+    others = sorted([f for f in folder_list if not f.isdigit()])
+    return jsonify(years + others)
+
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     return send_from_directory(MEDIA_DIR, filename)
