@@ -171,21 +171,6 @@ function renderGallery(messages) {
                 ${msg.tags.split(',').map(tag => `<span class="tag-badge">${tag.trim()}</span>`).join('')}
             </div>` : ''}
             ${msg.remarks ? `<div class="message-remarks"><i class="fa-solid fa-note-sticky"></i> ${msg.remarks}</div>` : ''}
-            
-            <div class="impressions-section">
-                <div class="impressions-title">
-                    <span>听众感想 (${(msg.impressions || []).length})</span>
-                </div>
-                <ul class="impressions-list">
-                    ${(msg.impressions || []).map(imp => `<li class="impression-item">${imp}</li>`).join('')}
-                    ${(msg.impressions || []).length === 0 ? '<li class="impression-item" style="border:none; color:var(--text-muted); opacity:0.6;">暂无感想</li>' : ''}
-                </ul>
-                ${isAdmin ? `
-                <div class="impression-input-group">
-                    <input type="text" class="impression-input" placeholder="输入听众感想..." id="imp-input-${index}">
-                    <button class="btn-impression" onclick="event.stopPropagation(); submitImpression(${index})">提交</button>
-                </div>` : ''}
-            </div>
             <div class="card-player-container" id="player-container-${index}"></div>
         `;
 
@@ -348,6 +333,35 @@ async function submitImpression(index) {
         }
     } catch (error) {
         alert('提交出错');
+    }
+}
+
+async function deleteImpression(msgIndex, impIndex) {
+    if (!confirm('确定要删除这条感想吗？')) return;
+
+    const msg = allMessages[msgIndex];
+    const text = msg.impressions[impIndex];
+
+    try {
+        const response = await fetch('/api/delete_impression', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': getAdminPassword()
+            },
+            body: JSON.stringify({
+                date: msg.date,
+                topic_zh: msg.topic_zh,
+                text: text
+            })
+        });
+        if (response.ok) {
+            loadMessages();
+        } else {
+            alert('删除失败');
+        }
+    } catch (error) {
+        alert('删除出错');
     }
 }
 
