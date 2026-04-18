@@ -2,10 +2,41 @@ from flask import Flask, jsonify, request, send_from_directory
 import os
 import json
 import threading
+import time
+from functools import wraps
 from sync import METADATA_FILE, MEDIA_DIR, load_metadata, save_metadata
 from sync_manager import manager as sync_manager
 
 app = Flask(__name__, static_url_path='', static_folder='.')
+
+# --- Security Configuration ---
+ADMIN_PASSWORD = "hca123"  # Change this to a secure password
+impression_limits = {}  # { ip: [timestamp1, timestamp2, ...] }
+# ------------------------------
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        password = request.headers.get('X-Admin-Password')
+        if password != ADMIN_PASSWORD:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def check_rate_limit():
+    ip = request.remote_addr
+    now = time.time()
+    if ip not in impression_limits:
+        impression_limits[ip] = []
+    
+    # Keep only requests from the last 60 seconds
+    impression_limits[ip] = [t for t in impression_limits[ip] if now - t < 60]
+    
+    if len(impression_limits[ip]) >= 3:
+        return False
+    
+    impression_limits[ip].append(now)
+    return True
 
 is_syncing = False
 
@@ -18,6 +49,7 @@ def get_metadata():
     return jsonify(load_metadata())
 
 @app.route('/api/sync', methods=['POST'])
+@admin_required
 def trigger_sync():
     if sync_manager.run_all():
         return jsonify({"status": "started", "message": "Master sync started in background"})
@@ -29,6 +61,7 @@ def get_status():
     return jsonify({"is_syncing": sync_manager.get_status()})
 
 @app.route('/api/upload', methods=['POST'])
+@admin_required
 def upload_file():
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
@@ -55,6 +88,7 @@ def upload_file():
     return jsonify({"status": "success", "relative_path": relative_path})
 
 @app.route('/api/add', methods=['POST'])
+@admin_required
 def add_manual_entry():
     data = request.json
     required = ["date", "topic_zh", "topic_en"]
@@ -78,6 +112,9 @@ def add_manual_entry():
 
 @app.route('/api/add_impression', methods=['POST'])
 def add_impression():
+    if not check_rate_limit():
+        return jsonify({"status": "error", "message": "Too many requests"}), 429
+    
     data = request.json
     date = data.get('date')
     topic_zh = data.get('topic_zh')

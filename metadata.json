@@ -7,8 +7,8 @@
     "scripture": "Jer耶 20:9,11; 1:5; 17:12; 18:6",
     "type": "Sunday Sharing",
     "local_path": "media/2026/20260322_1213PhillipJong.mp3",
-    "video_url": null,
-    "audio_url": null,
+    "video_url": "https://www.youtube.com/watch?v=-0c6PR3VZug",
+    "audio_url": "https://www.hcafamily.org/msgs/wo/2026/20260322_1213PhillipJong.mp3",
     "local_audio_path": null,
     "local_video_path": null,
     "tags": "HuiZhuan, XinXin",
@@ -27,7 +27,12 @@
     "local_path": "media/2026/20260306_1225PhillipJong.mp3",
     "audio_url": "https://www.hcafamily.org/msgs/wo/2026/20260306_1225PhillipJong.mp3",
     "local_audio_path": "media/2026/20260306_1225PhillipJong.mp3",
-    "local_video_path": ""
+    "local_video_path": "",
+    "impressions": [
+      "Test",
+      "A",
+      "BCDEF"
+    ]
   },
   {
     "date": "2026-02-27",

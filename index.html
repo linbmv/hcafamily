@@ -32,9 +32,11 @@
                 <select id="yearFilter">
                     <option value="all">所有年份</option>
                 </select>
-                <button id="addManualBtn" class="btn-primary" title="添加记录"><i class="fa-solid fa-plus"></i></button>
-                <button id="syncBtn" class="btn-sync" title="检查并同步最新信息"><i
+                <button id="addManualBtn" class="btn-primary admin-only" title="添加记录" style="display:none"><i
+                        class="fa-solid fa-plus"></i></button>
+                <button id="syncBtn" class="btn-sync admin-only" title="检查并同步最新信息" style="display:none"><i
                         class="fa-solid fa-arrows-rotate"></i></button>
+                <button id="loginBtn" class="btn-secondary" title="管理员登录"><i class="fa-solid fa-lock"></i></button>
                 <button id="bioBtn" class="btn-secondary" title="传道人简介"><i class="fa-solid fa-info-circle"></i></button>
             </div>
         </div>
@@ -101,6 +103,20 @@
         </div>
     </div>
 
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-modal" id="closeLoginModal">&times;</span>
+            <div class="message-topic-zh">管理员登录</div>
+            <div class="manual-form">
+                <input type="password" id="adminPassword" placeholder="请输入管理员密码" style="background: #0d1117;">
+                <button id="doLoginBtn" class="btn-primary" style="width: 100%; margin-top: 1rem;">登录</button>
+                <div id="loginStatus"
+                    style="font-size: 0.8rem; color: #ff4d4d; margin-top: 0.5rem; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

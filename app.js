@@ -1,10 +1,22 @@
 let allMessages = [];
 let allFolders = [];
+let isAdmin = false;
+
+function getAdminPassword() {
+    return localStorage.getItem('adminPassword') || '';
+}
 
 const gallery = document.getElementById('gallery');
 const searchInput = document.getElementById('searchInput');
 const yearFilter = document.getElementById('yearFilter');
 const playerModal = document.getElementById('playerModal');
+const manualModal = document.getElementById('manualModal');
+const loginModal = document.getElementById('loginModal');
+const adminPasswordInput = document.getElementById('adminPassword');
+const loginBtn = document.getElementById('loginBtn');
+const doLoginBtn = document.getElementById('doLoginBtn');
+const loginStatus = document.getElementById('loginStatus');
+const closeLoginModal = document.getElementById('closeLoginModal');
 const closeModal = document.getElementById('closeModal');
 const playerContainer = document.getElementById('playerContainer');
 const statusText = document.getElementById('statusText');
@@ -31,6 +43,50 @@ async function loadMessages() {
     }
 }
 
+loginBtn.onclick = () => {
+    if (isAdmin) {
+        // Logout
+        isAdmin = false;
+        localStorage.removeItem('adminPassword');
+        loginBtn.innerHTML = '<i class="fa-solid fa-lock"></i>';
+        loginBtn.title = "管理员登录";
+        updateAdminUI();
+        renderGallery(allMessages); // Refresh to hide edit buttons
+    } else {
+        loginModal.style.display = 'block';
+        adminPasswordInput.value = '';
+        loginStatus.innerText = '';
+    }
+};
+
+doLoginBtn.onclick = async () => {
+    const password = adminPasswordInput.value;
+    // Test password by fetching metadata (or we could have a dedicated /api/login)
+    // Actually, just set it and let subsequent requests fail if wrong
+    isAdmin = true;
+    localStorage.setItem('adminPassword', password);
+    loginModal.style.display = 'none';
+    loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+    loginBtn.title = "退出登录";
+    updateAdminUI();
+    renderGallery(allMessages);
+};
+
+closeLoginModal.onclick = () => loginModal.style.display = 'none';
+
+function updateAdminUI() {
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => el.style.display = isAdmin ? 'inline-block' : 'none');
+}
+
+// Check initial login state
+if (getAdminPassword()) {
+    isAdmin = true;
+    loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+    loginBtn.title = "退出登录";
+    updateAdminUI();
+}
+
 async function checkSyncStatus() {
     try {
         const response = await fetch('/api/status');
@@ -51,7 +107,12 @@ async function checkSyncStatus() {
 
 async function triggerSync() {
     try {
-        const response = await fetch('/api/sync', { method: 'POST' });
+        const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: {
+                'X-Admin-Password': getAdminPassword()
+            }
+        });
         if (response.ok) {
             checkSyncStatus();
         }
@@ -63,8 +124,8 @@ async function triggerSync() {
 const bioPanel = document.getElementById('bioPanel');
 const bioBtn = document.getElementById('bioBtn');
 const closeBio = document.getElementById('closeBio');
-const manualModal = document.getElementById('manualModal');
-const manualForm = document.getElementById('manualForm');
+// (already declared at top)
+// (already declared at top)
 
 bioBtn.onclick = () => bioPanel.classList.toggle('collapsed');
 closeBio.onclick = () => bioPanel.classList.add('collapsed');
@@ -73,35 +134,6 @@ document.getElementById('addManualBtn').onclick = () => manualModal.style.displa
 document.getElementById('closeManualModal').onclick = () => manualModal.style.display = 'none';
 document.getElementById('syncBtn').onclick = triggerSync;
 
-manualForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const data = {
-        date: document.getElementById('mDate').value,
-        topic_zh: document.getElementById('mTopicZH').value,
-        topic_en: document.getElementById('mTopicEN').value,
-        url: document.getElementById('mUrl').value,
-        scripture: document.getElementById('mScripture').value,
-        type: document.getElementById('mType').value
-    };
-
-    try {
-        const response = await fetch('/api/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (response.ok) {
-            alert('添加成功');
-            manualModal.style.display = 'none';
-            loadMessages();
-        } else {
-            const err = await response.json();
-            alert('错误: ' + err.message);
-        }
-    } catch (error) {
-        alert('添加失败');
-    }
-};
 
 function populateFolderFilter() {
     yearFilter.innerHTML = '<option value="all">所有分类</option>';
@@ -123,7 +155,7 @@ function renderGallery(messages) {
         const hasVideo = !!(msg.video_url || msg.local_video_path || (msg.local_path && msg.local_path.endsWith('.mp4')) || (msg.url && msg.url.endsWith('.mp4')));
 
         card.innerHTML = `
-            <div class="edit-overlay" title="编辑信息">✏️</div>
+        <div class="edit-overlay admin-only" title="编辑信息" style="${isAdmin ? '' : 'display:none'}">✏️</div>
             <div class="message-date">${msg.date}</div>
             <div class="message-topic-zh">${msg.topic_zh || '无中文标题'}</div>
             <div class="message-topic-en">${msg.topic_en || ''}</div>
@@ -333,7 +365,13 @@ manualForm.onsubmit = async (e) => {
         if (subfolder) formData.append('subfolder', subfolder);
 
         try {
-            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                    'X-Admin-Password': getAdminPassword()
+                },
+                body: formData
+            });
             const uploadData = await uploadRes.json();
             if (uploadData.status === 'success') {
                 localPath = uploadData.relative_path;
@@ -365,7 +403,10 @@ manualForm.onsubmit = async (e) => {
     try {
         const response = await fetch('/api/add', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': getAdminPassword()
+            },
             body: JSON.stringify(data)
         });
         if (response.ok) {
