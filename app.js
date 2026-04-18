@@ -180,10 +180,11 @@ function renderGallery(messages) {
                     ${(msg.impressions || []).map(imp => `<li class="impression-item">${imp}</li>`).join('')}
                     ${(msg.impressions || []).length === 0 ? '<li class="impression-item" style="border:none; color:var(--text-muted); opacity:0.6;">暂无感想</li>' : ''}
                 </ul>
+                ${isAdmin ? `
                 <div class="impression-input-group">
-                    <input type="text" class="impression-input" placeholder="输入你的感想..." id="imp-input-${index}">
+                    <input type="text" class="impression-input" placeholder="输入听众感想..." id="imp-input-${index}">
                     <button class="btn-impression" onclick="event.stopPropagation(); submitImpression(${index})">提交</button>
-                </div>
+                </div>` : ''}
             </div>
             <div class="card-player-container" id="player-container-${index}"></div>
         `;
@@ -329,7 +330,10 @@ async function submitImpression(index) {
     try {
         const response = await fetch('/api/add_impression', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': getAdminPassword()
+            },
             body: JSON.stringify({
                 date: msg.date,
                 topic_zh: msg.topic_zh,

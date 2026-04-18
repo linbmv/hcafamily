@@ -111,6 +111,7 @@ def add_manual_entry():
     return jsonify({"status": "success", "message": "Updated successfully" if found else "Added successfully"})
 
 @app.route('/api/add_impression', methods=['POST'])
+@admin_required
 def add_impression():
     if not check_rate_limit():
         return jsonify({"status": "error", "message": "Too many requests"}), 429
