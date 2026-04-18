@@ -10,7 +10,7 @@ from sync_manager import manager as sync_manager
 app = Flask(__name__, static_url_path='', static_folder='.')
 
 # --- Security Configuration ---
-ADMIN_PASSWORD = "hca123"  # Change this to a secure password
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'hca123')
 impression_limits = {}  # { ip: [timestamp1, timestamp2, ...] }
 # ------------------------------
 

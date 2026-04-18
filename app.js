@@ -285,9 +285,11 @@ function openPlayer(msg, index, mode = 'auto') {
             else if (url.includes('live/')) videoId = url.split('live/')[1].split('?')[0];
             else if (url.includes('be/')) videoId = url.split('be/')[1];
 
-            playerContainer.innerHTML = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            playerContainer.innerHTML = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         } else {
-            playerContainer.innerHTML = `<video controls src="${mediaPath}" autoplay></video>`;
+            playerContainer.innerHTML = `<video id="modalVideo" controls src="${mediaPath}" autoplay></video>`;
+            const video = document.getElementById('modalVideo');
+            if (video) video.play().catch(e => console.log("Video auto-play blocked:", e));
         }
         playerModal.style.display = 'flex';
     } else {
@@ -298,8 +300,10 @@ function openPlayer(msg, index, mode = 'auto') {
             targetContainer.innerHTML = '';
             targetContainer.classList.remove('active');
         } else {
-            targetContainer.innerHTML = `<audio controls src="${mediaPath}" autoplay style="width: 100%;"></audio>`;
+            targetContainer.innerHTML = `<audio id="audio-${index}" controls src="${mediaPath}" autoplay style="width: 100%;"></audio>`;
             targetContainer.classList.add('active');
+            const audio = document.getElementById(`audio-${index}`);
+            if (audio) audio.play().catch(e => console.log("Audio auto-play blocked:", e));
         }
     }
 }
