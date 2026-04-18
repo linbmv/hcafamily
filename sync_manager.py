@@ -21,13 +21,13 @@ class SyncManager:
         def master_task():
             try:
                 for name, syncer in self.syncers:
-                    print(f"--- Running {name} Sync ---")
+                    print(f"--- Running {name} Sync ---", flush=True)
                     try:
                         syncer()
                     except Exception as e:
-                        print(f"Error in {name} syncer: {e}")
+                        print(f"Error in {name} syncer: {e}", flush=True)
                         traceback.print_exc()
-                print("Master sync complete.")
+                print("Master sync complete.", flush=True)
             finally:
                 self.is_syncing = False
 
