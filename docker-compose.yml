@@ -6,4 +6,6 @@ services:
     volumes:
       - ./media:/app/media
       - ./metadata.json:/app/metadata.json
+    environment:
+      - ADMIN_PASSWORD=hca123
     restart: always
