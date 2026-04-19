@@ -1,3 +1,4 @@
+// VERSION: 1.1.0 - Frontend Deduplication Enabled
 let allMessages = [];
 let allFolders = [];
 let isAdmin = false;
