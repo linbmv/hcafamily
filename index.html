@@ -26,7 +26,7 @@
         <div class="top-bar">
             <div class="search-container">
                 <div class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-                <input type="text" id="searchInput" placeholder="搜索主题、日期或经文...">
+                <input type="text" id="searchInput" name="q" autocomplete="off" placeholder="搜索主题、日期或经文...">
             </div>
             <div class="controls-group">
                 <select id="yearFilter">
@@ -82,21 +82,21 @@
             <span class="close-modal" id="closeManualModal">&times;</span>
             <div class="message-topic-zh">手动添加信息</div>
             <form id="manualForm" class="manual-form">
-                <input type="date" id="mDate" required placeholder="日期">
-                <input type="text" id="mTopicZH" required placeholder="中文标题">
-                <input type="text" id="mTopicEN" placeholder="英文标题">
-                <input type="text" id="mSubfolder" placeholder="子文件夹 (可选, 如: 专题/讲经)">
+                <input type="date" id="mDate" name="date" required placeholder="日期">
+                <input type="text" id="mTopicZH" name="topic_zh" required placeholder="中文标题">
+                <input type="text" id="mTopicEN" name="topic_en" placeholder="英文标题">
+                <input type="text" id="mSubfolder" name="subfolder" placeholder="子文件夹 (可选, 如: 专题/讲经)">
                 <div class="input-row">
-                    <input type="text" id="mUrl" placeholder="媒体链接 (或下方选择本地文件)">
+                    <input type="text" id="mUrl" name="url" placeholder="媒体链接 (或下方选择本地文件)">
                     <input type="file" id="mFile" accept="audio/*,video/*" style="display:none">
                     <button type="button" class="btn-secondary" id="filePickBtn"
                         style="font-size:0.8rem">选择本地文件</button>
                 </div>
                 <div id="fileStatus" style="font-size:0.8rem; color:var(--text-muted)">未选择文件</div>
-                <input type="text" id="mScripture" placeholder="经文">
-                <input type="text" id="mType" placeholder="会议类型 ( e.g. Sunday Sharing)">
-                <input type="text" id="mTags" placeholder="标签 (关键字, 用逗号分隔)">
-                <textarea id="mRemarks" placeholder="备注 (管理备注)" rows="2"
+                <input type="text" id="mScripture" name="scripture" placeholder="经文">
+                <input type="text" id="mType" name="type" placeholder="会议类型 ( e.g. Sunday Sharing)">
+                <input type="text" id="mTags" name="tags" placeholder="标签 (关键字, 用逗号分隔)">
+                <textarea id="mRemarks" name="remarks" placeholder="备注 (管理备注)" rows="2"
                     style="width: 100%; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; background: var(--bg-card); color: var(--text-main); margin-top: 0.5rem;"></textarea>
                 <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">保存记录</button>
             </form>
@@ -110,7 +110,8 @@
             <span class="close-modal" id="closeLoginModal">&times;</span>
             <div class="message-topic-zh">管理员登录</div>
             <div class="manual-form">
-                <input type="password" id="adminPassword" placeholder="请输入管理员密码" style="background: #0d1117;">
+                <input type="password" id="adminPassword" name="password" autocomplete="current-password"
+                    placeholder="请输入管理员密码" style="background: #0d1117;">
                 <button id="doLoginBtn" class="btn-primary" style="width: 100%; margin-top: 1rem;">登录</button>
                 <div id="loginStatus"
                     style="font-size: 0.8rem; color: #ff4d4d; margin-top: 0.5rem; text-align: center;"></div>
