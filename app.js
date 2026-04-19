@@ -30,6 +30,15 @@ async function loadMessages() {
         allMessages = await metaRes.json();
         allFolders = await folderRes.json();
 
+        // Data Cleanup: Frontend Deduplication (Safety measure)
+        const seen = new Set();
+        allMessages = allMessages.filter(m => {
+            const key = `${m.date}|${m.topic_zh || ''}|${m.topic_en || ''}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
         // Sort by date descending
         allMessages.sort((a, b) => b.date.localeCompare(a.date));
 

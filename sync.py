@@ -61,7 +61,8 @@ def run_sync():
 
     rows = table.find_all('tr')[1:] # Skip header
     existing_metadata = load_metadata()
-    existing_keys = { (item['date'], item['topic_zh']) for item in existing_metadata }
+    # Robust deduplication key: (date, normalized_topic_zh)
+    existing_keys = { (item['date'], item.get('topic_zh', '').strip().lower()) for item in existing_metadata }
     
     new_items_count = 0
     downloaded_count = 0
@@ -88,9 +89,11 @@ def run_sync():
             if a: audio_url = a
             if v: video_url = v
 
-        if (date, topic_zh) in existing_keys:
+        # Normalize topic for comparison
+        norm_topic = topic_zh.strip().lower()
+        if (date, norm_topic) in existing_keys:
             # Smart Update: If existing entry is missing a link we just found, update it.
-            item = next((x for x in existing_metadata if x['date'] == date and x['topic_zh'] == topic_zh), None)
+            item = next((x for x in existing_metadata if x['date'] == date and x.get('topic_zh', '').strip().lower() == norm_topic), None)
             if item:
                 updated = False
                 if video_url and not item.get('video_url'):
@@ -175,6 +178,7 @@ def run_sync():
                 print(f"Error downloading video {filename}: {e}")
 
         existing_metadata.append(item)
+        existing_keys.add((date, topic_zh.strip().lower()))
         save_metadata(existing_metadata)
 
     return {

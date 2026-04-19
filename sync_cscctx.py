@@ -29,7 +29,8 @@ def save_metadata(data):
 def run_cscctx_sync():
     print(f"Starting CSCCTX Sync from {ARCHIVE_URL}...")
     metadata = load_metadata()
-    existing_keys = {(m['date'], m['topic_zh']) for m in metadata}
+    # Robust deduplication key: (date, normalized_topic_zh)
+    existing_keys = { (m['date'], m.get('topic_zh', '').strip().lower()) for m in metadata }
     
     response = requests.get(ARCHIVE_URL, headers=HEADERS)
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -75,7 +76,9 @@ def run_cscctx_sync():
                     except:
                         continue
                         
-                    if (date, topic) in existing_keys:
+                    # Normalize topic for comparison
+                    norm_topic = topic.strip().lower()
+                    if (date, norm_topic) in existing_keys:
                         continue
                     
                     audio_url = link['href']
@@ -120,7 +123,7 @@ def run_cscctx_sync():
                         "type": "CSCCTX Sermon"
                     }
                     metadata.append(new_item)
-                    existing_keys.add((date, topic))
+                    existing_keys.add((date, topic.strip().lower()))
                     new_items_count += 1
                     
                     # Save every item to be safe
