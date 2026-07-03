@@ -72,15 +72,31 @@ loginBtn.onclick = () => {
 
 doLoginBtn.onclick = async () => {
     const password = adminPasswordInput.value;
-    // Test password by fetching metadata (or we could have a dedicated /api/login)
-    // Actually, just set it and let subsequent requests fail if wrong
-    isAdmin = true;
-    localStorage.setItem('adminPassword', password);
-    loginModal.style.display = 'none';
-    loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
-    loginBtn.title = "退出登录";
-    updateAdminUI();
-    renderGallery(allMessages);
+    loginStatus.innerText = '正在验证...';
+    loginStatus.style.color = 'var(--text-secondary)';
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'X-Admin-Password': password
+            }
+        });
+        if (response.ok) {
+            isAdmin = true;
+            localStorage.setItem('adminPassword', password);
+            loginModal.style.display = 'none';
+            loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+            loginBtn.title = "退出登录";
+            updateAdminUI();
+            renderGallery(allMessages);
+        } else {
+            loginStatus.innerText = '密码错误，请重试';
+            loginStatus.style.color = 'var(--danger-color, #ff4d4f)';
+        }
+    } catch (error) {
+        loginStatus.innerText = '登录请求失败';
+        loginStatus.style.color = 'var(--danger-color, #ff4d4f)';
+    }
 };
 
 closeLoginModal.onclick = () => loginModal.style.display = 'none';
@@ -91,12 +107,31 @@ function updateAdminUI() {
 }
 
 // Check initial login state
-if (getAdminPassword()) {
-    isAdmin = true;
-    loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
-    loginBtn.title = "退出登录";
-    updateAdminUI();
+async function checkLogin() {
+    const pwd = getAdminPassword();
+    if (pwd) {
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'X-Admin-Password': pwd
+                }
+            });
+            if (response.ok) {
+                isAdmin = true;
+                loginBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+                loginBtn.title = "退出登录";
+                updateAdminUI();
+                renderGallery(allMessages);
+            } else {
+                localStorage.removeItem('adminPassword');
+                isAdmin = false;
+                updateAdminUI();
+            }
+        } catch (e) {}
+    }
 }
+checkLogin();
 
 async function checkSyncStatus() {
     try {

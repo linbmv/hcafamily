@@ -101,6 +101,13 @@ def upload_file():
     relative_path = os.path.relpath(file_path, root_path).replace('\\', '/')
     return jsonify({"status": "success", "relative_path": relative_path})
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    password = request.headers.get('X-Admin-Password')
+    if password == ADMIN_PASSWORD:
+        return jsonify({"status": "success", "message": "Logged in successfully"})
+    return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
 @app.route('/api/add', methods=['POST'])
 @admin_required
 def add_manual_entry():
