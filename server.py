@@ -117,17 +117,37 @@ def add_manual_entry():
         return jsonify({"status": "error", "message": "Missing required fields"}), 400
     
     metadata = load_metadata()
+    
     # Check if we should update an existing entry
     found = False
+    orig_date = data.get('orig_date')
+    orig_topic_zh = data.get('orig_topic_zh')
+    
     for i, item in enumerate(metadata):
-        if item['date'] == data['date'] and item['topic_zh'] == data['topic_zh']:
-            metadata[i].update(data)
+        # Match using orig_date and orig_topic_zh if they are provided,
+        # otherwise match using the new date and topic_zh
+        match_date = orig_date if orig_date else data['date']
+        match_topic = orig_topic_zh if orig_topic_zh else data['topic_zh']
+        
+        if item['date'] == match_date and item.get('topic_zh', '') == match_topic:
+            # We found the existing entry! Update it.
+            # Clean up the key values we don't need in the final JSON item
+            clean_data = {k: v for k, v in data.items() if k not in ['orig_date', 'orig_topic_zh']}
+            
+            # Preserve existing media paths if not overwritten by the edit
+            for path_key in ['local_audio_path', 'local_video_path', 'local_path', 'audio_url', 'video_url']:
+                if path_key in item and not clean_data.get(path_key):
+                    clean_data[path_key] = item[path_key]
+                    
+            metadata[i].update(clean_data)
             found = True
             break
-    
+            
     if not found:
-        metadata.append(data)
-    
+        # Clean up utility fields before appending
+        clean_data = {k: v for k, v in data.items() if k not in ['orig_date', 'orig_topic_zh']}
+        metadata.append(clean_data)
+        
     save_metadata(metadata)
     return jsonify({"status": "success", "message": "Updated successfully" if found else "Added successfully"})
 

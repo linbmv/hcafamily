@@ -205,7 +205,13 @@ const closeBio = document.getElementById('closeBio');
 bioBtn.onclick = () => bioPanel.classList.toggle('collapsed');
 closeBio.onclick = () => bioPanel.classList.add('collapsed');
 
-document.getElementById('addManualBtn').onclick = () => manualModal.style.display = 'flex';
+document.getElementById('addManualBtn').onclick = () => {
+    manualForm.reset();
+    document.getElementById('origDate').value = '';
+    document.getElementById('origTopicZH').value = '';
+    fileStatus.innerText = '未选择文件';
+    manualModal.style.display = 'flex';
+};
 document.getElementById('closeManualModal').onclick = () => manualModal.style.display = 'none';
 document.getElementById('syncBtn').onclick = triggerSync;
 document.getElementById('scanBtn').onclick = triggerScan;
@@ -379,6 +385,11 @@ function editMessage(msg) {
     document.getElementById('mType').value = msg.type;
     document.getElementById('mTags').value = msg.tags || '';
     document.getElementById('mRemarks').value = msg.remarks || '';
+    
+    // Track original identity key to allow renaming
+    document.getElementById('origDate').value = msg.date;
+    document.getElementById('origTopicZH').value = msg.topic_zh || '';
+    
     manualModal.style.display = 'flex';
 }
 
@@ -495,7 +506,9 @@ manualForm.onsubmit = async (e) => {
         scripture: document.getElementById('mScripture').value,
         type: document.getElementById('mType').value,
         tags: document.getElementById('mTags').value,
-        remarks: document.getElementById('mRemarks').value
+        remarks: document.getElementById('mRemarks').value,
+        orig_date: document.getElementById('origDate').value,
+        orig_topic_zh: document.getElementById('origTopicZH').value
     };
 
     try {
