@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import hashlib
 from collections import defaultdict
 
@@ -61,12 +62,37 @@ def clean_and_merge_duplicates():
                 g_topic_en = group.get('topic_en', '').strip().lower()
                 g_type = group.get('type', '').strip().lower()
                 
+                # Check if one is a local scan draft and the other is online scraped data
+                is_g_local_scan = (group.get('scripture') == 'Local Scan')
+                is_i_local_scan = (item.get('scripture') == 'Local Scan')
+                
+                is_local_scan_dup = False
+                if (is_g_local_scan and not is_i_local_scan) or (is_i_local_scan and not is_g_local_scan):
+                    local_entry = group if is_g_local_scan else item
+                    online_entry = item if is_g_local_scan else group
+                    
+                    local_file = os.path.basename(local_entry.get('local_audio_path') or local_entry.get('local_path') or '')
+                    online_file = os.path.basename(online_entry.get('audio_url') or online_entry.get('local_path') or '')
+                    
+                    # Extract 4-digit code (e.g. _1225 or _2126)
+                    local_code = re.search(r'_(\d{4})', local_file)
+                    online_code = re.search(r'_(\d{4})', online_file)
+                    
+                    if local_code and online_code and local_code.group(1) == online_code.group(1):
+                        is_local_scan_dup = True
+                    elif local_file and online_file and (local_file in online_file or online_file in local_file):
+                        is_local_scan_dup = True
+                    elif len([x for x in items if x.get('scripture') != 'Local Scan']) == 1:
+                        # Only one online entry exists on this date
+                        is_local_scan_dup = True
+                
                 # Check if topics are identical/empty or very similar, and types match
                 # (Or if it's the exact same sermon but one has empty title)
                 same_topic = (item_topic_zh == g_topic_zh and item_topic_zh != '') or \
                              (item_topic_en == g_topic_en and item_topic_en != '') or \
                              (item_topic_zh == '' and g_topic_zh != '') or \
-                             (g_topic_zh == '' and item_topic_zh != '')
+                             (g_topic_zh == '' and item_topic_zh != '') or \
+                             is_local_scan_dup
                              
                 same_type = (item_type == g_type) or (item_type in ['', 'sermon'] or g_type in ['', 'sermon'])
                 
