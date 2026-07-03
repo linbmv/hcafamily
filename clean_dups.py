@@ -75,6 +75,18 @@ def clean_and_merge_duplicates():
                     break
             
             if matched_group:
+                # Prioritize keeping online scraper metadata!
+                # If matched_group is a 'Local Scan' entry, but the current item is an online scraped entry,
+                # swap them so that we keep the rich online metadata in the matched_group.
+                is_g_local = (matched_group.get('scripture') == 'Local Scan')
+                is_i_local = (item.get('scripture') == 'Local Scan')
+                
+                if is_g_local and not is_i_local:
+                    temp = matched_group.copy()
+                    matched_group.clear()
+                    matched_group.update(item)
+                    item = temp
+                    
                 # Merge fields!
                 print(f"\n[Merge] Duplicate record found on {date}:")
                 print(f"  Keep:   {matched_group.get('topic_zh')} ({matched_group.get('type')})")

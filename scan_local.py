@@ -140,24 +140,42 @@ def run_local_scan():
             
             # Check if we can smart-match this with an existing entry on the same date
             matched = False
-            for item in metadata:
-                if item.get('date') == date_str:
-                    # Check if the title is similar or if there's no title, or if we just match by date and missing path
-                    if is_audio and not item.get('local_audio_path'):
-                        item['local_audio_path'] = rel_path
-                        # Also sync local_path if not set
-                        if not item.get('local_path'):
-                            item['local_path'] = rel_path
-                        matched = True
-                        matched_files_count += 1
-                        print(f"Smart-matched {file} as audio for existing date {date_str}")
-                        break
-                    elif not is_audio and not item.get('local_video_path'):
-                        item['local_video_path'] = rel_path
-                        matched = True
-                        matched_files_count += 1
-                        print(f"Smart-matched {file} as video for existing date {date_str}")
-                        break
+            candidates = [item for item in metadata if item.get('date') == date_str]
+            
+            if candidates:
+                matched_item = None
+                if len(candidates) == 1:
+                    matched_item = candidates[0]
+                else:
+                    # Find candidate with matching type or topic similarity
+                    for cand in candidates:
+                        cand_type = cand.get('type', '').strip().lower()
+                        if meeting_type.strip().lower() in cand_type or cand_type in meeting_type.strip().lower():
+                            matched_item = cand
+                            break
+                    if not matched_item:
+                        matched_item = candidates[0]
+                
+                if matched_item:
+                    # Overwrite paths - local file takes priority
+                    if is_audio:
+                        old_path = matched_item.get('local_audio_path')
+                        matched_item['local_audio_path'] = rel_path
+                        matched_item['local_path'] = rel_path
+                        if old_path and old_path != rel_path:
+                            print(f"Overwrote audio path from '{old_path}' to local file '{rel_path}' for date {date_str}")
+                        else:
+                            print(f"Associated local audio file '{rel_path}' with existing entry on {date_str}")
+                    else:
+                        old_path = matched_item.get('local_video_path')
+                        matched_item['local_video_path'] = rel_path
+                        if old_path and old_path != rel_path:
+                            print(f"Overwrote video path from '{old_path}' to local file '{rel_path}' for date {date_str}")
+                        else:
+                            print(f"Associated local video file '{rel_path}' with existing entry on {date_str}")
+                    
+                    matched = True
+                    matched_files_count += 1
             
             if not matched:
                 # Create a new entry
