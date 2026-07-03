@@ -21,6 +21,7 @@ const closeLoginModal = document.getElementById('closeLoginModal');
 const closeModal = document.getElementById('closeModal');
 const playerContainer = document.getElementById('playerContainer');
 const statusText = document.getElementById('statusText');
+const scanBtn = document.getElementById('scanBtn');
 
 async function loadMessages() {
     try {
@@ -131,6 +132,35 @@ async function triggerSync() {
     }
 }
 
+async function triggerScan() {
+    if (!scanBtn) return;
+    scanBtn.disabled = true;
+    scanBtn.classList.add('spinning');
+    scanBtn.title = '正在扫描本地文件...';
+    try {
+        const response = await fetch('/api/scan', {
+            method: 'POST',
+            headers: {
+                'X-Admin-Password': getAdminPassword()
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            alert(`本地扫描与去重合并完成！\n新增记录: ${data.new_entries} 个\n匹配更新: ${data.matched_entries} 个`);
+            loadMessages();
+        } else {
+            const err = await response.json();
+            alert('扫描失败: ' + (err.message || '未知错误'));
+        }
+    } catch (error) {
+        alert('触发扫描失败');
+    } finally {
+        scanBtn.disabled = false;
+        scanBtn.classList.remove('spinning');
+        scanBtn.title = '扫描并刮削本地媒体文件';
+    }
+}
+
 const bioPanel = document.getElementById('bioPanel');
 const bioBtn = document.getElementById('bioBtn');
 const closeBio = document.getElementById('closeBio');
@@ -143,6 +173,7 @@ closeBio.onclick = () => bioPanel.classList.add('collapsed');
 document.getElementById('addManualBtn').onclick = () => manualModal.style.display = 'flex';
 document.getElementById('closeManualModal').onclick = () => manualModal.style.display = 'none';
 document.getElementById('syncBtn').onclick = triggerSync;
+document.getElementById('scanBtn').onclick = triggerScan;
 
 
 function populateFolderFilter() {

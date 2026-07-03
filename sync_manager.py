@@ -2,13 +2,15 @@ import threading
 import traceback
 from sync import run_sync as sync_hca
 from sync_cscctx import run_cscctx_sync as sync_cscctx
+from scan_local import run_local_scan as sync_local
 
 class SyncManager:
     def __init__(self):
         self.is_syncing = False
         self.syncers = [
             ("HCA Family", sync_hca),
-            ("CSCCTX Archive", sync_cscctx)
+            ("CSCCTX Archive", sync_cscctx),
+            ("Local Folder Scan", sync_local)
         ]
 
     def run_all(self):

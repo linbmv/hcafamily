@@ -6,6 +6,7 @@ import time
 from functools import wraps
 from sync import METADATA_FILE, MEDIA_DIR, load_metadata, save_metadata
 from sync_manager import manager as sync_manager
+from scan_local import run_local_scan
 
 app = Flask(__name__, static_url_path='', static_folder='.')
 
@@ -35,6 +36,7 @@ def check_rate_limit():
     if len(impression_limits[ip]) >= 3:
         return False
     
+    # Actually add timestamp if limit not exceeded
     impression_limits[ip].append(now)
     return True
 
@@ -55,6 +57,18 @@ def trigger_sync():
         return jsonify({"status": "started", "message": "Master sync started in background"})
     else:
         return jsonify({"status": "busy", "message": "Sync already in progress"}), 409
+
+@app.route('/api/scan', methods=['POST'])
+@admin_required
+def trigger_scan():
+    result = run_local_scan()
+    try:
+        from clean_dups import clean_and_merge_duplicates
+        clean_and_merge_duplicates()
+        result["deduplicated"] = True
+    except Exception as e:
+        result["deduplicated_error"] = str(e)
+    return jsonify(result)
 
 @app.route('/api/status')
 def get_status():
@@ -164,12 +178,78 @@ def get_folders():
 def serve_media(filename):
     return send_from_directory(MEDIA_DIR, filename)
 
+def start_scheduler():
+    def scheduler_loop():
+        # Wait 30 seconds after startup before running anything
+        time.sleep(30)
+        
+        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        SCHEDULER_FILE = os.path.join(ROOT_DIR, "scheduler.json")
+        
+        def get_last_run_times():
+            if os.path.exists(SCHEDULER_FILE):
+                try:
+                    with open(SCHEDULER_FILE, 'r') as sf:
+                        return json.load(sf)
+                except:
+                    pass
+            return {"last_local_scan": 0, "last_online_sync": 0}
+            
+        def save_last_run_times(times):
+            try:
+                with open(SCHEDULER_FILE, 'w') as sf:
+                    json.dump(times, sf)
+            except:
+                pass
+
+        while True:
+            now = time.time()
+            times = get_last_run_times()
+            
+            # 1. Run local scan & deduplicate every 12 hours (43200 seconds)
+            if now - times.get("last_local_scan", 0) > 12 * 3600:
+                print("[Scheduler] Running automatic local scan and deduplication...", flush=True)
+                try:
+                    run_local_scan()
+                    from clean_dups import clean_and_merge_duplicates
+                    clean_and_merge_duplicates()
+                    times["last_local_scan"] = now
+                    save_last_run_times(times)
+                except Exception as e:
+                    print(f"[Scheduler] Local scan/dedup failed: {e}", flush=True)
+            
+            # 2. Run online website sync every 7 days (604800 seconds)
+            if now - times.get("last_online_sync", 0) > 7 * 86400:
+                print("[Scheduler] Running automatic online sync...", flush=True)
+                try:
+                    sync_manager.run_all()
+                    times["last_online_sync"] = now
+                    save_last_run_times(times)
+                except Exception as e:
+                    print(f"[Scheduler] Online sync failed: {e}", flush=True)
+                
+            # Sleep for 15 minutes before checking again
+            time.sleep(900)
+            
+    thread = threading.Thread(target=scheduler_loop, daemon=True)
+    thread.start()
+    print("Background scheduler thread started.", flush=True)
+
 if __name__ == '__main__':
-    # Ensure media directory exists
+    # Ensure media directory
+    try:
+        abs_path = os.path.abspath(METADATA_FILE)
+        print(f"Loading metadata from: {abs_path}", flush=True)
+        if os.path.exists(METADATA_FILE):
+            pass
+    except:
+        pass
     if not os.path.exists(MEDIA_DIR):
         os.makedirs(MEDIA_DIR)
     # Ensure misc dir exists
     misc_dir = os.path.join(MEDIA_DIR, "misc")
     if not os.path.exists(misc_dir):
         os.makedirs(misc_dir)
+        
+    start_scheduler()
     app.run(host='0.0.0.0', port=5000)
